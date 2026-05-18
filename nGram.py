@@ -22,17 +22,14 @@ class CharLevelNGram:
         self.class_priors = {}
 
     def extract_char_ngrams(self, text):
+        # Add padding(_)
+        padded_text = "_" * (self.n - 1) + text + "_" * (self.n - 1)
 
-        for text, label in self.dataset:
-            # Add padding(_)
-            padded_text = "_" * (self.n - 1) + text + "_" * (self.n - 1)
-
-            # Generate overlapping n-grams
-            ngrams = [
-                padded_text[i:i+self.n]
-                for i in range(len(padded_text) - self.n + 1)
-            ]
-
+        # Generate overlapping n-grams
+        ngrams = [
+            padded_text[i:i+self.n]
+            for i in range(len(padded_text) - self.n + 1)
+        ]
         return ngrams
 
     def build_class_frequencies(self, ngram, label):
@@ -166,13 +163,15 @@ print("---------------------TRAINING")
 loader = LoadData()
 df = loader.load_data()
 
+# Shuffle
+df = df.sample(frac=1, random_state=42).reset_index(drop=True)
 train_df = df.head(800) #Training 800
 test_df = df.tail(200) # Testing 200
 #TRAINING
 # label , clean_review
 dataset = list(zip(train_df["clean_review"], train_df["label"]))
-
-model = CharLevelNGram(dataset, n=4)
+# print(df["clean_review"])
+model = CharLevelNGram(dataset, n=5)
 model.train_model()
 
 #Testing
@@ -180,26 +179,31 @@ print("------------------------TESTING")
 testdataset = list(zip(test_df["clean_review"], test_df["label"]))
 y_true,y_pred = model.test_model(testdataset)
 print("PRIORS:", model.class_priors)
-print("Total Class Counts:", model.class_total_counts) 
+print("Total Class Counts:", model.class_total_counts)
+# print("N-gram Counts: ",model.class_ngram_counts)
 
+###########
+# sample = df.sample(1)
+
+# review = sample["clean_review"].values[0]
+# actual = sample["label"].values[0]
+# prediction = model.predict_text(review)
+# print("Review:")
+# print(review)
+
+# print("Actual:", actual)
+# print("Predicted:", prediction)
+
+#######################
+# print("\nVocabulary:",model.vocabulary)
 
 # Evaluation
-# Initialize the reused class
 metrics = ConfusionMetrics(y_true, y_pred)
-
-print(f"Accuracy: {metrics.accuracy()}")
-print(f"Recall: {metrics.recall()}")
-print(f"Precision: {metrics.precision()}")
-print(f"F1 Score: {metrics.f1_score()}")
-
-
-# Print statistics
-# print("\nN-gram Counts\n")
-# print(model.class_ngram_counts)
-
-# print("\nN-grams\n")
-# print(model.ngram)
-
-
-# print("\nVocabulary\n")
-# print(model.vocabulary)
+print("TP:", metrics.TP)
+print("FP:", metrics.FP)
+print("FN:", metrics.FN)
+print("TN:", metrics.TN)
+print(f"Accuracy: {metrics.accuracy()*100}")
+print(f"Recall: {metrics.recall()*100}")
+print(f"Precision: {metrics.precision()*100}")
+print(f"F1 Score: {metrics.f1_score()*100}")
